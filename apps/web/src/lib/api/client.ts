@@ -1,5 +1,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+function extractErrorMessage(err: any, status: number): string {
+  if (typeof err.detail === "string") return err.detail;
+  if (Array.isArray(err.detail) && err.detail.length > 0) {
+    return err.detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ");
+  }
+  return err.message || `API Error: ${status}`;
+}
+
 export class ApiClient {
   private static getToken(): string | null {
     if (typeof window === "undefined") return null;
@@ -18,7 +26,7 @@ export class ApiClient {
     const res = await fetch(`${API_BASE_URL}${path}`, { headers });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `API Error: ${res.status}`);
+      throw new Error(extractErrorMessage(err, res.status));
     }
     return res.json();
   }
@@ -39,7 +47,7 @@ export class ApiClient {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `API Error: ${res.status}`);
+      throw new Error(extractErrorMessage(err, res.status));
     }
     return res.json();
   }
@@ -60,7 +68,7 @@ export class ApiClient {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `API Error: ${res.status}`);
+      throw new Error(extractErrorMessage(err, res.status));
     }
     return res.json();
   }
@@ -80,7 +88,7 @@ export class ApiClient {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `API Error: ${res.status}`);
+      throw new Error(extractErrorMessage(err, res.status));
     }
     return res.json();
   }
@@ -106,9 +114,8 @@ export class ApiClient {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || err.message || `Upload Error: ${res.status}`);
+      throw new Error(extractErrorMessage(err, res.status));
     }
     return res.json();
   }
 }
-

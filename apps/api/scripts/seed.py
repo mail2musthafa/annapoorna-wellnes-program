@@ -100,6 +100,7 @@ async def seed_data(db: AsyncSession) -> None:
         ("daniel.thomas@example.com", "Daniel", "Thomas"),
         ("member@annapoorna.local", "Ananya", "Member"),
         ("admin@annapoorna.local", "Super", "Admin"),
+        ("admin@annapoornawellness.org", "Super", "Admin"),
     ]
 
     member_users: list[User] = []
