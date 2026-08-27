@@ -1,0 +1,34 @@
+{
+    email admin@annapoornawellness.org
+}
+
+annapoornawellness.org, www.annapoornawellness.org {
+    encode gzip zstd
+
+    # Route API endpoints directly to FastAPI backend
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+    handle /docs* {
+        reverse_proxy api:8000
+    }
+    handle /openapi.json {
+        reverse_proxy api:8000
+    }
+    handle /redoc* {
+        reverse_proxy api:8000
+    }
+    handle /uploads/* {
+        reverse_proxy api:8000
+    }
+
+    # Everything else to Next.js Web Frontend
+    handle {
+        reverse_proxy web:3000
+    }
+}
+
+api.annapoornawellness.org {
+    encode gzip zstd
+    reverse_proxy api:8000
+}

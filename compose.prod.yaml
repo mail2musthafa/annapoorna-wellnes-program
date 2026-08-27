@@ -1,0 +1,115 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: annapoorna_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: annapoorna_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-annapoorna_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-annapoorna_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-annapoorna_user} -d ${POSTGRES_DB:-annapoorna_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: annapoorna_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.prod
+    container_name: annapoorna_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - APP_ENV=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-annapoorna_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-annapoorna_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - APP_SECRET_KEY=${APP_SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://annapoornawellness.org,https://www.annapoornawellness.org,https://api.annapoornawellness.org}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-console}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-local}
+      - PAYMENT_PROVIDER=${PAYMENT_PROVIDER:-mock}
+    volumes:
+      - api_storage:/app/storage
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.prod
+    container_name: annapoorna_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-annapoorna_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-annapoorna_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - APP_SECRET_KEY=${APP_SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - api_storage:/app/storage
+    command: celery -A app.jobs.worker.celery_app worker --loglevel=info
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.prod
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://annapoornawellness.org}
+    container_name: annapoorna_web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://annapoornawellness.org}
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_storage:
+  caddy_data:
+  caddy_config:
