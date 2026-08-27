@@ -18,11 +18,21 @@ class DomainException(HTTPException):
         self.extra = extra or {}
 
 
+class BadRequestException(DomainException):
+    def __init__(self, detail: str = "Bad request", code: str = "BAD_REQUEST", extra: dict[str, Any] | None = None):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+            code=code,
+            extra=extra,
+        )
+
+
 class NotFoundException(DomainException):
-    def __init__(self, resource: str, identifier: Any):
+    def __init__(self, resource: str, identifier: Any = ""):
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{resource} with identifier '{identifier}' was not found.",
+            detail=f"{resource} with identifier '{identifier}' was not found." if identifier else f"{resource} not found.",
             code="RESOURCE_NOT_FOUND",
             extra={"resource": resource, "identifier": str(identifier)},
         )

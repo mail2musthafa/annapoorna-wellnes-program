@@ -3,7 +3,13 @@ export interface User {
   email: string;
   first_name: string;
   last_name?: string;
+  phone_number?: string;
+  auth_provider?: string;
+  is_phone_verified?: boolean;
   roles: string[];
+  permissions?: string[];
+  avatar_url?: string;
+  health_goals?: string[];
 }
 
 export interface UserAuthSession {

@@ -25,13 +25,43 @@ logger = logging.getLogger("annapoorna.app")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Starting {settings.APP_NAME} in [{settings.APP_ENV}] mode...")
-    # Optional startup verification
     try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        logger.info("Database connectivity confirmed.")
+        async with engine.begin() as conn:
+            from app.db.base import Base
+            import app.modules.users.models  # noqa
+            import app.modules.roles.models  # noqa
+            import app.modules.pillars.models  # noqa
+            import app.modules.programs.models  # noqa
+            import app.modules.courses.models  # noqa
+            import app.modules.recipes.models  # noqa
+            import app.modules.meal_plans.models  # noqa
+            import app.modules.live_classes.models  # noqa
+            import app.modules.coaching.models  # noqa
+            import app.modules.community.models  # noqa
+            import app.modules.commerce.models  # noqa
+            import app.modules.enquiries.models  # noqa
+            import app.modules.leads.models  # noqa
+            import app.modules.notifications.models  # noqa
+            import app.modules.audit.models  # noqa
+            import app.modules.wellness_tracking.models  # noqa
+
+            await conn.run_sync(Base.metadata.create_all)
+
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(30);"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(50) DEFAULT 'email';"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS oauth_id VARCHAR(255);"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_phone_verified BOOLEAN DEFAULT FALSE;"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMP WITH TIME ZONE;"))
+                await conn.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS gender VARCHAR(30);"))
+                await conn.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS date_of_birth VARCHAR(30);"))
+                await conn.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS health_goals TEXT;"))
+                await conn.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS wellness_interests TEXT;"))
+            except Exception:
+                pass
+        logger.info("Database schema synchronized.")
     except Exception as e:
-        logger.warning(f"Database pre-check notice (may connect during requests): {e}")
+        logger.warning(f"Database initialization notice: {e}")
 
     yield
 

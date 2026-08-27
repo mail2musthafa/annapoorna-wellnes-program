@@ -20,9 +20,14 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin):
 
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone_number: Mapped[str | None] = mapped_column(String(30), unique=True, index=True, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default=UserStatus.ACTIVE, nullable=False, index=True)
+    auth_provider: Mapped[str] = mapped_column(String(50), default="email", nullable=False)
+    oauth_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     profile: Mapped["UserProfile"] = relationship(
@@ -62,8 +67,12 @@ class UserProfile(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    date_of_birth: Mapped[str | None] = mapped_column(String(30), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    health_goals: Mapped[str | None] = mapped_column(Text, nullable=True)
+    wellness_interests: Mapped[str | None] = mapped_column(Text, nullable=True)
     timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
@@ -103,3 +112,20 @@ class ConsentRecord(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="consents")
+
+
+class PasswordResetToken(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    __tablename__ = "password_reset_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    token: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    otp_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    user: Mapped["User"] = relationship("User")
