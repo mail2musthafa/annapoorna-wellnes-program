@@ -27,8 +27,3 @@ annapoornawellness.org, www.annapoornawellness.org {
         reverse_proxy web:3000
     }
 }
-
-api.annapoornawellness.org {
-    encode gzip zstd
-    reverse_proxy api:8000
-}
